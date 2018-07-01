@@ -1,0 +1,11 @@
+**/bin
+**/build
+.gradle
+**/.project
+**/.classpath
+**/.factorypath
+**/.settings
+**/.apt_generated
+**/src-gen
+compiler/src/antlr/gen
+target

@@ -1,0 +1,87 @@
+buildscript {
+  repositories { jcenter() }
+
+  dependencies { classpath 'com.github.ben-manes:gradle-versions-plugin:0.20.0' }
+}
+apply plugin: 'com.github.ben-manes.versions'
+
+ext {
+  productName = 'MPL'
+  encoding = 'UTF-8'
+}
+allprojects {
+  group = 'de.adrodoc55.mpl'
+  version = getGitVersion()
+}
+
+String getGitVersion() {
+  try {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+      commandLine 'git', 'describe', '--dirty=-SNAPSHOT'
+      standardOutput = stdout
+    }
+    return stdout.toString().trim().substring(1)
+  } catch (Exception e) {
+    return "UNKNOWN-VERSION"
+  }
+}
+
+boolean isReleaseVersion() {
+  version ==~ /\d+\.\d+\.\d+/
+}
+
+if (!project.hasProperty('sonatype.username') || !project.hasProperty('sonatype.password')) {
+  logger.warn "[warning] sonatype username or password not set"
+}
+
+// ----------------------------------------------------------------------------------------------------
+//    _      _  _                        _
+//   | |    (_)| |__   _ __  __ _  _ __ (_)  ___  ___
+//   | |    | || '_ \ | '__|/ _` || '__|| | / _ \/ __|
+//   | |___ | || |_) || |  | (_| || |   | ||  __/\__ \
+//   |_____||_||_.__/ |_|   \__,_||_|   |_| \___||___/
+//
+// ----------------------------------------------------------------------------------------------------
+
+ext.libs = [
+  brigadier:      'com.mojang:brigadier:0.1.27',
+  gson:           'com.google.code.gson:gson:2.8.5',
+  jsr305:         'com.google.code.findbugs:jsr305:3.0.2',
+]
+
+// ----------------------------------------------------------------------------------------------------
+
+apply plugin: 'eclipse'
+
+task wrapper (type: Wrapper) { gradleVersion = '4.8.1' }
+
+allprojects {
+  repositories {
+    mavenCentral()
+    maven { url 'https://libraries.minecraft.net' }
+  }
+
+  pluginManager.withPlugin('eclipse') {
+    apply from: rootProject.file('snippets/eclipse/configure-eclipse.gradle')
+  }
+
+  tasks.withType(JavaCompile) { options.encoding = encoding }
+
+  tasks.withType(Test) {
+    beforeTest { TestDescriptor descriptor ->
+      logger.lifecycle('Running test: ' + descriptor.name + '(' + descriptor.className + ')')
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------------------------------
+
+apply plugin: 'eclipse'
+apply plugin: 'java'
+
+dependencies {
+  compile libs.brigadier
+  compile libs.gson
+  compile libs.jsr305
+}
