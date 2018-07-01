@@ -79,6 +79,8 @@ allprojects {
 
 apply plugin: 'eclipse'
 apply plugin: 'java'
+apply plugin: 'application'
+mainClassName = 'de.adrodoc.minecraft.debugger.McFunctionDebugger'
 
 dependencies {
   compile libs.brigadier
