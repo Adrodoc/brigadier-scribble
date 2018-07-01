@@ -32,7 +32,7 @@ public class BlockPosArgumentType extends ExhaustiveExamplesArgumentType<BlockPo
         return absolute(reader.readInt());
       }
     } else {
-      throw MoreExceptions.INSTANCE.expected3Coordinates().createWithContext(reader);
+      throw MoreExceptions.MORE_EXCEPTIONS.expected3Coordinates().createWithContext(reader);
     }
   }
 

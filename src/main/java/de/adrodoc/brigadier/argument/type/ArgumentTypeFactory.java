@@ -15,18 +15,22 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import de.adrodoc.brigadier.DataContext;
 import de.adrodoc.brigadier.SuggestionContext;
 import de.adrodoc.brigadier.argument.type.minecraft.BlockPosArgumentType;
 import de.adrodoc.brigadier.argument.type.minecraft.ColorArgumentType;
 import de.adrodoc.brigadier.argument.type.minecraft.ResourceLocationArgumentType;
 import de.adrodoc.brigadier.argument.type.minecraft.TeamArgumentType;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.BlockStateArgumentType;
 
 public class ArgumentTypeFactory {
-  private final SuggestionContext context;
+  private final DataContext data;
+  private final SuggestionContext suggestionsContext;
   private @Nullable ImmutableMap<String, Function<JsonObject, ArgumentType<?>>> argumentTypeFactories;
 
-  public ArgumentTypeFactory(SuggestionContext context) {
-    this.context = requireNonNull(context, "context == null!");
+  public ArgumentTypeFactory(DataContext data, SuggestionContext context) {
+    this.data = requireNonNull(data, "data == null!");
+    this.suggestionsContext = requireNonNull(context, "context == null!");
   }
 
   public ArgumentType<?> getArgumentType(String identifier, @Nullable JsonObject properties) {
@@ -163,9 +167,9 @@ public class ArgumentTypeFactory {
     return new UnsupportedArgumentType();
   }
 
-  public UnsupportedArgumentType minecraftBlockState(@Nullable JsonObject properties) {
+  public BlockStateArgumentType minecraftBlockState(@Nullable JsonObject properties) {
     checkNoProperties(properties);
-    return new UnsupportedArgumentType();
+    return new BlockStateArgumentType(data);
   }
 
   public ColorArgumentType minecraftColor(@Nullable JsonObject properties) {
@@ -294,7 +298,7 @@ public class ArgumentTypeFactory {
 
   public TeamArgumentType minecraftTeam(@Nullable JsonObject properties) {
     checkNoProperties(properties);
-    return new TeamArgumentType(context);
+    return new TeamArgumentType(suggestionsContext);
   }
 
   public UnsupportedArgumentType minecraftVec2(@Nullable JsonObject properties) {

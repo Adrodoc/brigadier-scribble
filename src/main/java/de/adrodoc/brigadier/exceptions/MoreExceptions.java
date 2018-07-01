@@ -8,8 +8,8 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 
 public class MoreExceptions extends BuiltInExceptions {
-  public static final MoreExceptions INSTANCE = new MoreExceptions();
-  private static final Dynamic3CommandExceptionType BLOCK_DOES_NOT_ACCEPT_VALUE =
+  public static final MoreExceptions MORE_EXCEPTIONS = new MoreExceptions();
+  private static final Dynamic3CommandExceptionType BLOCK_DOES_NOT_ACCEPT_VALUE_FOR_PROPERTY =
       new Dynamic3CommandExceptionType((block, value, property) -> new LiteralMessage(
           "Block " + block + " does not accept '" + value + "' for " + property + " property"));
   private static final Dynamic2CommandExceptionType BLOCK_DOES_NOT_HAVE_PROPERTY =
@@ -20,7 +20,7 @@ public class MoreExceptions extends BuiltInExceptions {
   private static final SimpleCommandExceptionType EXPECTED_CLOSING_SQUARE_BRACKET =
       new SimpleCommandExceptionType(
           new LiteralMessage("Expected closing ] for block state properties"));
-  private static final Dynamic2CommandExceptionType EXPECTED_VALUE_FOR_PROPERTY =
+  private static final Dynamic2CommandExceptionType EXPECTED_VALUE_FOR_PROPERTY_ON_BLOCK =
       new Dynamic2CommandExceptionType((property, block) -> new LiteralMessage(
           "Expected value for property '" + property + "' on block " + block));
   private static final SimpleCommandExceptionType INVALID_ID =
@@ -32,8 +32,8 @@ public class MoreExceptions extends BuiltInExceptions {
       new DynamicCommandExceptionType(
           value -> new LiteralMessage("Unknown block type '" + value + "'"));
 
-  public Dynamic3CommandExceptionType blockDoesNotAcceptValue() {
-    return BLOCK_DOES_NOT_ACCEPT_VALUE;
+  public Dynamic3CommandExceptionType blockDoesNotAcceptValueForProperty() {
+    return BLOCK_DOES_NOT_ACCEPT_VALUE_FOR_PROPERTY;
   }
 
   public Dynamic2CommandExceptionType blockDoesNotHaveProperty() {
@@ -48,8 +48,8 @@ public class MoreExceptions extends BuiltInExceptions {
     return EXPECTED_CLOSING_SQUARE_BRACKET;
   }
 
-  public Dynamic2CommandExceptionType expectedValueForProperty() {
-    return EXPECTED_VALUE_FOR_PROPERTY;
+  public Dynamic2CommandExceptionType expectedValueForPropertyOnBlock() {
+    return EXPECTED_VALUE_FOR_PROPERTY_ON_BLOCK;
   }
 
   public SimpleCommandExceptionType invalidId() {
