@@ -82,6 +82,8 @@ apply plugin: 'java'
 apply plugin: 'application'
 mainClassName = 'de.adrodoc.minecraft.debugger.McFunctionDebugger'
 
+sourceSets.main.resources.srcDir 'mc-nbt-paths'
+
 dependencies {
   compile libs.brigadier
   compile libs.gson
