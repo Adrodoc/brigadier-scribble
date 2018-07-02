@@ -1,0 +1,3 @@
+[submodule "mc-nbt-paths"]
+	path = mc-nbt-paths
+	url = https://github.com/MrYurihi/mc-nbt-paths.git
