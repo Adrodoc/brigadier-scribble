@@ -10,12 +10,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 
 public class DataLoader {
   public static DataContext load(String resourceName) throws IOException {
@@ -36,6 +38,11 @@ public class DataLoader {
       @Override
       public Set<String> getBlockTypes() {
         return blockProperties.keySet();
+      }
+
+      @Override
+      public Set<String> getNbtNames(String blockType, NbtPath nbtPath) {
+        return ImmutableSet.of(nbtPath.toString());
       }
     };
   }

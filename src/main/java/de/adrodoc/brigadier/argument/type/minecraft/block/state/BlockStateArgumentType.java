@@ -31,6 +31,7 @@ import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.Expec
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueForPropertyOnBlockException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnknownBlockTypeException;
+import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
 
 public class BlockStateArgumentType implements ArgumentType<Void> {
@@ -76,7 +77,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       throw new UnknownBlockTypeException(blockType);
     }
     Map<String, String> blockProperties = readBlockProperties(reader, blockType);
-    JsonObject nbt = readNbt(reader);
+    JsonObject nbt = readNbt(reader, blockType);
   }
 
   private Map<String, String> readBlockProperties(StringReader reader, String blockType)
@@ -96,12 +97,11 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       if (!possibleProperties.contains(propertyName)) {
         throw new BlockDoesNotHavePropertyException(blockType, propertyName);
       }
-      reader.skipWhitespace();
-      if (!reader.canRead() || reader.peek() != '=') {
+      try {
+        readSeperator(reader, '=');
+      } catch (ExpectedCharException e) {
         throw new ExpectedValueForPropertyOnBlockException(propertyName, blockType);
       }
-      reader.skip();
-      reader.skipWhitespace();
       String propertyValue = reader.readString();
       Set<String> possibleValues = data.getBlockPropertyValues(blockType, propertyName);
       if (!possibleValues.contains(propertyValue)) {
@@ -109,12 +109,9 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
             propertyName);
       }
       result.put(propertyName, propertyValue);
-      reader.skipWhitespace();
-      if (!reader.canRead() || reader.peek() != ',') {
+      if (!tryReadSeperator(reader, ',')) {
         break;
       }
-      reader.skip();
-      reader.skipWhitespace();
     }
     if (!reader.canRead() || reader.peek() != ']') {
       throw new ExpectedClosingSquareBracketException(blockType, result.keySet());
@@ -123,26 +120,27 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
     return result;
   }
 
-  private JsonObject readNbt(StringReader reader) throws CommandSyntaxException,
+  private JsonObject readNbt(StringReader reader, String blockType) throws CommandSyntaxException,
       ExpectedCharException, ExpectedKeyException, ExpectedValueException {
     if (!reader.canRead() || reader.peek() != '{') {
       return new JsonObject();
     } else {
-      return readObject(reader);
+      return readObject(reader, blockType, new NbtPath());
     }
   }
 
-  private JsonElement readJson(StringReader reader) throws CommandSyntaxException,
-      ExpectedCharException, ExpectedKeyException, ExpectedValueException {
+  private JsonElement readJson(StringReader reader, String blockType, NbtPath nbtPath)
+      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
+      ExpectedValueException {
     if (!reader.canRead()) {
       throw new ExpectedValueException();
     }
     char peek = reader.peek();
     switch (peek) {
       case '{':
-        return readObject(reader);
+        return readObject(reader, blockType, nbtPath);
       case '[':
-        return readArray(reader);
+        return readArray(reader, blockType, nbtPath);
       default:
         String string = reader.readString();
         if (string.isEmpty()) {
@@ -152,8 +150,9 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
     }
   }
 
-  private JsonObject readObject(StringReader reader) throws CommandSyntaxException,
-      ExpectedCharException, ExpectedKeyException, ExpectedValueException {
+  private JsonObject readObject(StringReader reader, String blockType, NbtPath nbtPath)
+      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
+      ExpectedValueException {
     if (!reader.canRead() || reader.peek() != '{') {
       throw new ExpectedValueException();
     }
@@ -166,30 +165,23 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       if (key.isEmpty()) {
         throw new ExpectedKeyException();
       }
-      reader.skipWhitespace();
-      if (!reader.canRead() || reader.peek() != ':') {
-        throw new ExpectedCharException(':');
-      }
-      reader.skip();
-      reader.skipWhitespace();
-      JsonElement value = readJson(reader);
+      readSeperator(reader, ':');
+      JsonElement value = readJson(reader, blockType, nbtPath.with(key));
       result.add(key, value);
-      reader.skipWhitespace();
-      if (!reader.canRead() || reader.peek() != ',') {
+      if (!tryReadSeperator(reader, ',')) {
         break;
       }
-      reader.skip();
-      reader.skipWhitespace();
     }
     if (!reader.canRead() || reader.peek() != '}') {
-      throw new ExpectedClosingCurlyBracketException();
+      throw new ExpectedClosingCurlyBracketException(blockType, nbtPath, result.keySet());
     }
     reader.skip();
     return result;
   }
 
-  private JsonElement readArray(StringReader reader) throws CommandSyntaxException,
-      ExpectedCharException, ExpectedKeyException, ExpectedValueException {
+  private JsonElement readArray(StringReader reader, String blockType, NbtPath nbtPath)
+      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
+      ExpectedValueException {
     if (!reader.canRead() || reader.peek() != '[') {
       throw new ExpectedValueException();
     }
@@ -198,20 +190,34 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
     JsonArray result = new JsonArray();
     while (reader.canRead() && reader.peek() != ']') {
-      JsonElement element = readJson(reader);
+      JsonElement element = readJson(reader, blockType, nbtPath);
       result.add(element);
-      reader.skipWhitespace();
-      if (!reader.canRead() || reader.peek() != ',') {
+      if (!tryReadSeperator(reader, ',')) {
         break;
       }
-      reader.skip();
-      reader.skipWhitespace();
     }
     if (!reader.canRead() || reader.peek() != ']') {
       throw new ExpectedCharException(']');
     }
     reader.skip();
     return result;
+  }
+
+  private void readSeperator(StringReader reader, char seperator) throws ExpectedCharException {
+    if (!tryReadSeperator(reader, seperator)) {
+      throw new ExpectedCharException(seperator);
+    }
+  }
+
+  private boolean tryReadSeperator(StringReader reader, char seperator) {
+    reader.skipWhitespace();
+    if (reader.canRead() && reader.peek() == seperator) {
+      reader.skip();
+      reader.skipWhitespace();
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -237,17 +243,19 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           suggestValuesStartingWith(builder, e.propertyName, possibleProperties);
         } catch (ExpectedClosingCurlyBracketException e) {
           builder.suggest(String.valueOf(e.c));
-          if (!remaining.trim().endsWith(",")) {
+          Set<String> possibleNbtNames = data.getNbtNames(e.blockType, e.nbtPath);
+          SetView<String> unusedNbtNames = Sets.difference(possibleNbtNames, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedNbtNames.isEmpty()
+              && !remaining.trim().endsWith(",")) {
             builder.suggest(",");
           } else {
-            builder.suggest("key");
-            // TODO: handle exception
+            suggestValues(builder, unusedNbtNames);
           }
         } catch (ExpectedClosingSquareBracketException e) {
           builder.suggest(String.valueOf(e.c));
           Set<String> possibleProperties = data.getBlockProperties(e.blockType);
-          SetView<String> unusedProperties = Sets.difference(possibleProperties, e.blockProperties);
-          if (!e.blockProperties.isEmpty() && !unusedProperties.isEmpty()
+          SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedProperties.isEmpty()
               && !remaining.trim().endsWith(",")) {
             builder.suggest(",");
           } else {

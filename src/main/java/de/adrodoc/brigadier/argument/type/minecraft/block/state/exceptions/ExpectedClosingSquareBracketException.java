@@ -9,11 +9,11 @@ import com.google.common.collect.ImmutableSet;
 public class ExpectedClosingSquareBracketException extends ExpectedCharException {
   private static final long serialVersionUID = 1L;
   public final String blockType;
-  public final ImmutableSet<String> blockProperties;
+  public final ImmutableSet<String> usedKeys;
 
-  public ExpectedClosingSquareBracketException(String blockType, Set<String> blockProperties) {
+  public ExpectedClosingSquareBracketException(String blockType, Set<String> usedKeys) {
     super(']');
     this.blockType = requireNonNull(blockType, "blockType == null!");
-    this.blockProperties = ImmutableSet.copyOf(blockProperties);
+    this.usedKeys = ImmutableSet.copyOf(usedKeys);
   }
 }
