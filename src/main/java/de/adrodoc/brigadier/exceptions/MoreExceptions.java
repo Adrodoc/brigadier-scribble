@@ -8,7 +8,6 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 
 public class MoreExceptions extends BuiltInExceptions {
-  public static final MoreExceptions MORE_EXCEPTIONS = new MoreExceptions();
   private static final Dynamic3CommandExceptionType BLOCK_DOES_NOT_ACCEPT_VALUE_FOR_PROPERTY =
       new Dynamic3CommandExceptionType((block, value, property) -> new LiteralMessage(
           "Block " + block + " does not accept '" + value + "' for " + property + " property"));
@@ -20,11 +19,16 @@ public class MoreExceptions extends BuiltInExceptions {
   private static final SimpleCommandExceptionType EXPECTED_CLOSING_SQUARE_BRACKET =
       new SimpleCommandExceptionType(
           new LiteralMessage("Expected closing ] for block state properties"));
+  private static final SimpleCommandExceptionType EXPECTED_KEY =
+      new SimpleCommandExceptionType(new LiteralMessage("Expected key"));
+  private static final SimpleCommandExceptionType EXPECTED_VALUE =
+      new SimpleCommandExceptionType(new LiteralMessage("Expected value"));
   private static final Dynamic2CommandExceptionType EXPECTED_VALUE_FOR_PROPERTY_ON_BLOCK =
       new Dynamic2CommandExceptionType((property, block) -> new LiteralMessage(
           "Expected value for property '" + property + "' on block " + block));
   private static final SimpleCommandExceptionType INVALID_ID =
       new SimpleCommandExceptionType(new LiteralMessage("Invalid ID"));
+  public static final MoreExceptions MORE_EXCEPTIONS = new MoreExceptions();
   private static final DynamicCommandExceptionType UNKNOWN_BLOCK_TAG =
       new DynamicCommandExceptionType(
           value -> new LiteralMessage("Unknown block tag '" + value + "'"));
@@ -46,6 +50,14 @@ public class MoreExceptions extends BuiltInExceptions {
 
   public SimpleCommandExceptionType expectedClosingSquareBracket() {
     return EXPECTED_CLOSING_SQUARE_BRACKET;
+  }
+
+  public SimpleCommandExceptionType expectedKey() {
+    return EXPECTED_KEY;
+  }
+
+  public SimpleCommandExceptionType expectedValue() {
+    return EXPECTED_VALUE;
   }
 
   public Dynamic2CommandExceptionType expectedValueForPropertyOnBlock() {
