@@ -2,11 +2,13 @@ package de.adrodoc.brigadier.argument.type.minecraft.block.state;
 
 import static de.adrodoc.brigadier.exceptions.MoreExceptions.MORE_EXCEPTIONS;
 import static java.util.Objects.requireNonNull;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
@@ -20,6 +22,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+
 import de.adrodoc.brigadier.DataContext;
 import de.adrodoc.brigadier.StringReaderUtils;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.BlockDoesNotAcceptValueForPropertyException;
@@ -95,7 +98,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       String propertyName = reader.readString();
       Set<String> possibleProperties = data.getBlockProperties(blockType);
       if (!possibleProperties.contains(propertyName)) {
-        throw new BlockDoesNotHavePropertyException(blockType, propertyName);
+        throw new BlockDoesNotHavePropertyException(blockType, propertyName, result.keySet());
       }
       try {
         readSeperator(reader, '=');
@@ -240,7 +243,8 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
         } catch (BlockDoesNotHavePropertyException e) {
           Set<String> possibleProperties = data.getBlockProperties(e.blockType);
-          suggestValuesStartingWith(builder, e.propertyName, possibleProperties);
+          SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
+          suggestValuesStartingWith(builder, e.propertyName, unusedProperties);
         } catch (ExpectedClosingCurlyBracketException e) {
           builder.suggest(String.valueOf(e.c));
           Set<String> possibleNbtNames = data.getNbtNames(e.blockType, e.nbtPath);
