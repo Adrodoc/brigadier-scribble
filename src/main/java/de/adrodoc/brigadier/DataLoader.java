@@ -27,7 +27,7 @@ public class DataLoader {
     Map<String, SetMultimap<String, String>> blockProperties = loadBlockProperties(resourceName);
     return new DataContext() {
       @Override
-      public Set<String> getBlockProperties(String blockType) {
+      public Set<String> getBlockPropertyKeys(String blockType) {
         SetMultimap<String, String> properties = blockProperties.get(blockType);
         return properties == null ? Collections.emptySet() : properties.keySet();
       }
@@ -44,7 +44,7 @@ public class DataLoader {
       }
 
       @Override
-      public Set<String> getNbtNames(String blockType, NbtPath nbtPath) {
+      public Set<String> getCompoundNbtKeys(String blockType, NbtPath nbtPath) {
         return ImmutableSet.of(nbtPath.toString());
       }
     };

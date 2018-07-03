@@ -107,7 +107,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
     Map<String, String> result = new HashMap<>();
     while (reader.canRead() && reader.peek() != ']') {
       String propertyName = reader.readString();
-      Set<String> possibleProperties = data.getBlockProperties(blockType);
+      Set<String> possibleProperties = data.getBlockPropertyKeys(blockType);
       if (!possibleProperties.contains(propertyName)) {
         throw new IllegalBlockPropertyKeyException(blockType, propertyName, result.keySet());
       }
@@ -271,31 +271,27 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
         } catch (ExpectedValueException e) {
           builder.suggest("value");
         } catch (IllegalBlockPropertyKeyException e) {
-          Set<String> possibleProperties = data.getBlockProperties(e.blockType);
-          SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
-          suggestValuesStartingWith(builder, e.propertyName, unusedProperties);
+          SetView<String> unusedKeys = getUnusedPropertyKeys(e.blockType, e.usedKeys);
+          suggestValuesStartingWith(builder, e.propertyName, unusedKeys);
         } catch (IllegalBlockPropertyValueException e) {
           Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyName);
           suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
         } catch (UnclosedBlockPropertiesException e) {
           builder.suggest("]");
-          Set<String> possibleProperties = data.getBlockProperties(e.blockType);
-          SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
-          if (!e.usedKeys.isEmpty() && !unusedProperties.isEmpty()
-              && !remaining.trim().endsWith(",")) {
+          SetView<String> unusedKeys = getUnusedPropertyKeys(e.blockType, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
             builder.suggest(",");
           } else {
-            suggestValues(builder, unusedProperties);
+            suggestValues(builder, unusedKeys);
           }
         } catch (UnclosedCompoundNbtException e) {
           builder.suggest("}");
-          Set<String> possibleNbtNames = data.getNbtNames(e.blockType, e.nbtPath);
-          SetView<String> unusedNbtNames = Sets.difference(possibleNbtNames, e.usedKeys);
-          if (!e.usedKeys.isEmpty() && !unusedNbtNames.isEmpty()
-              && !remaining.trim().endsWith(",")) {
+          Set<String> possibleKeys = data.getCompoundNbtKeys(e.blockType, e.nbtPath);
+          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
             builder.suggest(",");
           } else {
-            suggestValues(builder, unusedNbtNames);
+            suggestValues(builder, unusedKeys);
           }
         } catch (UnknownBlockTypeException e) {
           suggestValuesStartingWith(builder, e.blockType, data.getBlockTypes());
@@ -303,6 +299,11 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       }
     }
     return builder.buildFuture();
+  }
+
+  private SetView<String> getUnusedPropertyKeys(String blockType, Set<String> usedKeys) {
+    Set<String> possibleKeys = data.getBlockPropertyKeys(blockType);
+    return Sets.difference(possibleKeys, usedKeys);
   }
 
   private void suggestValuesStartingWith(SuggestionsBuilder builder, String input,
