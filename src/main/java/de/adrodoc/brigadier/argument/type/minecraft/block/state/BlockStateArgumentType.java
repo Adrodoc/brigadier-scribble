@@ -25,14 +25,14 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 
 import de.adrodoc.brigadier.DataContext;
 import de.adrodoc.brigadier.StringReaderUtils;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.BlockDoesNotAcceptValueForPropertyException;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.BlockDoesNotHavePropertyException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedCharException;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedClosingCurlyBracketException;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedClosingSquareBracketException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedKeyException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueForPropertyOnBlockException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.IllegalBlockPropertyKeyException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.IllegalBlockPropertyValueException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedBlockPropertiesException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedCompoundNbtException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnknownBlockTypeException;
 import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
@@ -48,33 +48,41 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   public <S> Void parse(StringReader reader) throws CommandSyntaxException {
     try {
       parseInternal(reader);
-    } catch (BlockDoesNotAcceptValueForPropertyException e) {
-      throw MORE_EXCEPTIONS.blockDoesNotAcceptValueForProperty().create(e.blockType,
-          e.propertyValue, e.propertyName);
-    } catch (BlockDoesNotHavePropertyException e) {
-      throw MORE_EXCEPTIONS.blockDoesNotHaveProperty().createWithContext(reader, e.blockType,
-          e.propertyName);
-    } catch (ExpectedClosingSquareBracketException e) {
-      throw MORE_EXCEPTIONS.expectedClosingSquareBracket().createWithContext(reader);
     } catch (ExpectedValueForPropertyOnBlockException e) {
       throw MORE_EXCEPTIONS.expectedValueForPropertyOnBlock().createWithContext(reader,
           e.propertyName, e.blockType);
-    } catch (UnknownBlockTypeException e) {
-      throw MORE_EXCEPTIONS.unknownBlockType().createWithContext(reader, e.blockType);
     } catch (ExpectedCharException e) {
       throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, e.c);
     } catch (ExpectedKeyException e) {
       throw MORE_EXCEPTIONS.expectedKey().createWithContext(reader);
     } catch (ExpectedValueException e) {
       throw MORE_EXCEPTIONS.expectedValue().createWithContext(reader);
+    } catch (IllegalBlockPropertyKeyException e) {
+      throw MORE_EXCEPTIONS.blockDoesNotHaveProperty().createWithContext(reader, e.blockType,
+          e.propertyName);
+    } catch (IllegalBlockPropertyValueException e) {
+      throw MORE_EXCEPTIONS.blockDoesNotAcceptValueForProperty().create(e.blockType,
+          e.propertyValue, e.propertyName);
+    } catch (UnclosedBlockPropertiesException e) {
+      throw MORE_EXCEPTIONS.expectedClosingSquareBracket().createWithContext(reader);
+    } catch (UnclosedCompoundNbtException e) {
+      throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, '}');
+    } catch (UnknownBlockTypeException e) {
+      throw MORE_EXCEPTIONS.unknownBlockType().createWithContext(reader, e.blockType);
     }
     return null;
   }
 
-  private void parseInternal(StringReader reader) throws CommandSyntaxException,
-      BlockDoesNotAcceptValueForPropertyException, BlockDoesNotHavePropertyException,
-      ExpectedClosingSquareBracketException, ExpectedCharException, ExpectedKeyException,
-      ExpectedValueException, UnknownBlockTypeException {
+  private void parseInternal(StringReader reader) throws CommandSyntaxException, //
+      ExpectedCharException, //
+      ExpectedKeyException, //
+      ExpectedValueException, //
+      IllegalBlockPropertyKeyException, //
+      IllegalBlockPropertyValueException, //
+      UnclosedBlockPropertiesException, //
+      UnclosedCompoundNbtException, //
+      UnknownBlockTypeException //
+  {
     String blockType = StringReaderUtils.readId(reader);
     if (!data.getBlockTypes().contains(blockType)) {
       throw new UnknownBlockTypeException(blockType);
@@ -84,9 +92,12 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   }
 
   private Map<String, String> readBlockProperties(StringReader reader, String blockType)
-      throws CommandSyntaxException, BlockDoesNotAcceptValueForPropertyException,
-      BlockDoesNotHavePropertyException, ExpectedClosingSquareBracketException,
-      ExpectedValueForPropertyOnBlockException {
+      throws CommandSyntaxException, //
+      ExpectedValueForPropertyOnBlockException, //
+      IllegalBlockPropertyKeyException, //
+      IllegalBlockPropertyValueException, //
+      UnclosedBlockPropertiesException //
+  {
     if (!reader.canRead() || reader.peek() != '[') {
       return Collections.emptyMap();
     }
@@ -98,7 +109,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       String propertyName = reader.readString();
       Set<String> possibleProperties = data.getBlockProperties(blockType);
       if (!possibleProperties.contains(propertyName)) {
-        throw new BlockDoesNotHavePropertyException(blockType, propertyName, result.keySet());
+        throw new IllegalBlockPropertyKeyException(blockType, propertyName, result.keySet());
       }
       try {
         readSeperator(reader, '=');
@@ -108,8 +119,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       String propertyValue = reader.readString();
       Set<String> possibleValues = data.getBlockPropertyValues(blockType, propertyName);
       if (!possibleValues.contains(propertyValue)) {
-        throw new BlockDoesNotAcceptValueForPropertyException(blockType, propertyValue,
-            propertyName);
+        throw new IllegalBlockPropertyValueException(blockType, propertyName, propertyValue);
       }
       result.put(propertyName, propertyValue);
       if (!tryReadSeperator(reader, ',')) {
@@ -117,14 +127,18 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       }
     }
     if (!reader.canRead() || reader.peek() != ']') {
-      throw new ExpectedClosingSquareBracketException(blockType, result.keySet());
+      throw new UnclosedBlockPropertiesException(blockType, result.keySet());
     }
     reader.skip();
     return result;
   }
 
-  private JsonObject readNbt(StringReader reader, String blockType) throws CommandSyntaxException,
-      ExpectedCharException, ExpectedKeyException, ExpectedValueException {
+  private JsonObject readNbt(StringReader reader, String blockType) throws CommandSyntaxException, //
+      ExpectedCharException, //
+      ExpectedKeyException, //
+      ExpectedValueException, //
+      UnclosedCompoundNbtException //
+  {
     if (!reader.canRead() || reader.peek() != '{') {
       return new JsonObject();
     } else {
@@ -133,8 +147,12 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   }
 
   private JsonElement readJson(StringReader reader, String blockType, NbtPath nbtPath)
-      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
-      ExpectedValueException {
+      throws CommandSyntaxException, //
+      ExpectedCharException, //
+      ExpectedKeyException, //
+      ExpectedValueException, //
+      UnclosedCompoundNbtException //
+  {
     if (!reader.canRead()) {
       throw new ExpectedValueException();
     }
@@ -154,8 +172,12 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   }
 
   private JsonObject readObject(StringReader reader, String blockType, NbtPath nbtPath)
-      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
-      ExpectedValueException {
+      throws CommandSyntaxException, //
+      ExpectedCharException, //
+      ExpectedKeyException, //
+      ExpectedValueException, //
+      UnclosedCompoundNbtException //
+  {
     if (!reader.canRead() || reader.peek() != '{') {
       throw new ExpectedValueException();
     }
@@ -176,15 +198,19 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       }
     }
     if (!reader.canRead() || reader.peek() != '}') {
-      throw new ExpectedClosingCurlyBracketException(blockType, nbtPath, result.keySet());
+      throw new UnclosedCompoundNbtException(blockType, nbtPath, result.keySet());
     }
     reader.skip();
     return result;
   }
 
   private JsonElement readArray(StringReader reader, String blockType, NbtPath nbtPath)
-      throws CommandSyntaxException, ExpectedCharException, ExpectedKeyException,
-      ExpectedValueException {
+      throws CommandSyntaxException, //
+      ExpectedCharException, //
+      ExpectedKeyException, //
+      ExpectedValueException, //
+      UnclosedCompoundNbtException //
+  {
     if (!reader.canRead() || reader.peek() != '[') {
       throw new ExpectedValueException();
     }
@@ -193,7 +219,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
     JsonArray result = new JsonArray();
     while (reader.canRead() && reader.peek() != ']') {
-      JsonElement element = readJson(reader, blockType, nbtPath);
+      JsonElement element = readJson(reader, blockType, nbtPath.with("[]"));
       result.add(element);
       if (!tryReadSeperator(reader, ',')) {
         break;
@@ -238,25 +264,21 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       } else {
         try {
           throw pe;
-        } catch (BlockDoesNotAcceptValueForPropertyException e) {
-          Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyName);
-          suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
-        } catch (BlockDoesNotHavePropertyException e) {
+        } catch (ExpectedCharException e) {
+          builder.suggest(String.valueOf(e.c));
+        } catch (ExpectedKeyException e) {
+          builder.suggest("key");
+        } catch (ExpectedValueException e) {
+          builder.suggest("value");
+        } catch (IllegalBlockPropertyKeyException e) {
           Set<String> possibleProperties = data.getBlockProperties(e.blockType);
           SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
           suggestValuesStartingWith(builder, e.propertyName, unusedProperties);
-        } catch (ExpectedClosingCurlyBracketException e) {
-          builder.suggest(String.valueOf(e.c));
-          Set<String> possibleNbtNames = data.getNbtNames(e.blockType, e.nbtPath);
-          SetView<String> unusedNbtNames = Sets.difference(possibleNbtNames, e.usedKeys);
-          if (!e.usedKeys.isEmpty() && !unusedNbtNames.isEmpty()
-              && !remaining.trim().endsWith(",")) {
-            builder.suggest(",");
-          } else {
-            suggestValues(builder, unusedNbtNames);
-          }
-        } catch (ExpectedClosingSquareBracketException e) {
-          builder.suggest(String.valueOf(e.c));
+        } catch (IllegalBlockPropertyValueException e) {
+          Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyName);
+          suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
+        } catch (UnclosedBlockPropertiesException e) {
+          builder.suggest("]");
           Set<String> possibleProperties = data.getBlockProperties(e.blockType);
           SetView<String> unusedProperties = Sets.difference(possibleProperties, e.usedKeys);
           if (!e.usedKeys.isEmpty() && !unusedProperties.isEmpty()
@@ -265,12 +287,16 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           } else {
             suggestValues(builder, unusedProperties);
           }
-        } catch (ExpectedCharException e) {
-          builder.suggest(String.valueOf(e.c));
-        } catch (ExpectedKeyException e) {
-          builder.suggest("key");
-        } catch (ExpectedValueException e) {
-          builder.suggest("value");
+        } catch (UnclosedCompoundNbtException e) {
+          builder.suggest("}");
+          Set<String> possibleNbtNames = data.getNbtNames(e.blockType, e.nbtPath);
+          SetView<String> unusedNbtNames = Sets.difference(possibleNbtNames, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedNbtNames.isEmpty()
+              && !remaining.trim().endsWith(",")) {
+            builder.suggest(",");
+          } else {
+            suggestValues(builder, unusedNbtNames);
+          }
         } catch (UnknownBlockTypeException e) {
           suggestValuesStartingWith(builder, e.blockType, data.getBlockTypes());
         }
