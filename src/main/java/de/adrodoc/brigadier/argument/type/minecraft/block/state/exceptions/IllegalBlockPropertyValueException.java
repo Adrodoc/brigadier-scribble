@@ -10,13 +10,13 @@ import de.adrodoc.brigadier.exceptions.ParseException;
 public class IllegalBlockPropertyValueException extends ParseException {
   private static final long serialVersionUID = 1L;
   public final String blockType;
-  public final String propertyName;
+  public final String propertyKey;
   public final String propertyValue;
 
-  public IllegalBlockPropertyValueException(String blockType, String propertyName,
+  public IllegalBlockPropertyValueException(String blockType, String propertyKey,
       String propertyValue) {
     this.blockType = requireNonNull(blockType, "blockType == null!");
-    this.propertyName = requireNonNull(propertyName, "propertyName == null!");
+    this.propertyKey = requireNonNull(propertyKey, "propertyKey == null!");
     this.propertyValue = requireNonNull(propertyValue, "propertyValue == null!");
   }
 }

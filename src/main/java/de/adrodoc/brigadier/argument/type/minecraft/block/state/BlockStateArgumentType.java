@@ -50,7 +50,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       parseInternal(reader);
     } catch (ExpectedValueForPropertyOnBlockException e) {
       throw MORE_EXCEPTIONS.expectedValueForPropertyOnBlock().createWithContext(reader,
-          e.propertyName, e.blockType);
+          e.propertyKey, e.blockType);
     } catch (ExpectedCharException e) {
       throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, e.c);
     } catch (ExpectedKeyException e) {
@@ -59,10 +59,10 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       throw MORE_EXCEPTIONS.expectedValue().createWithContext(reader);
     } catch (IllegalBlockPropertyKeyException e) {
       throw MORE_EXCEPTIONS.blockDoesNotHaveProperty().createWithContext(reader, e.blockType,
-          e.propertyName);
+          e.propertyKey);
     } catch (IllegalBlockPropertyValueException e) {
       throw MORE_EXCEPTIONS.blockDoesNotAcceptValueForProperty().create(e.blockType,
-          e.propertyValue, e.propertyName);
+          e.propertyValue, e.propertyKey);
     } catch (UnclosedBlockPropertiesException e) {
       throw MORE_EXCEPTIONS.expectedClosingSquareBracket().createWithContext(reader);
     } catch (UnclosedCompoundNbtException e) {
@@ -106,22 +106,22 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
     Map<String, String> result = new HashMap<>();
     while (reader.canRead() && reader.peek() != ']') {
-      String propertyName = reader.readString();
+      String propertyKey = reader.readString();
       Set<String> possibleProperties = data.getBlockPropertyKeys(blockType);
-      if (!possibleProperties.contains(propertyName)) {
-        throw new IllegalBlockPropertyKeyException(blockType, propertyName, result.keySet());
+      if (!possibleProperties.contains(propertyKey)) {
+        throw new IllegalBlockPropertyKeyException(blockType, propertyKey, result.keySet());
       }
       try {
         readSeperator(reader, '=');
       } catch (ExpectedCharException e) {
-        throw new ExpectedValueForPropertyOnBlockException(propertyName, blockType);
+        throw new ExpectedValueForPropertyOnBlockException(propertyKey, blockType);
       }
       String propertyValue = reader.readString();
-      Set<String> possibleValues = data.getBlockPropertyValues(blockType, propertyName);
+      Set<String> possibleValues = data.getBlockPropertyValues(blockType, propertyKey);
       if (!possibleValues.contains(propertyValue)) {
-        throw new IllegalBlockPropertyValueException(blockType, propertyName, propertyValue);
+        throw new IllegalBlockPropertyValueException(blockType, propertyKey, propertyValue);
       }
-      result.put(propertyName, propertyValue);
+      result.put(propertyKey, propertyValue);
       if (!tryReadSeperator(reader, ',')) {
         break;
       }
@@ -271,14 +271,16 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
         } catch (ExpectedValueException e) {
           builder.suggest("value");
         } catch (IllegalBlockPropertyKeyException e) {
-          SetView<String> unusedKeys = getUnusedPropertyKeys(e.blockType, e.usedKeys);
-          suggestValuesStartingWith(builder, e.propertyName, unusedKeys);
+          Set<String> possibleKeys = data.getBlockPropertyKeys(e.blockType);
+          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
+          suggestValuesStartingWith(builder, e.propertyKey, unusedKeys);
         } catch (IllegalBlockPropertyValueException e) {
-          Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyName);
+          Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyKey);
           suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
         } catch (UnclosedBlockPropertiesException e) {
           builder.suggest("]");
-          SetView<String> unusedKeys = getUnusedPropertyKeys(e.blockType, e.usedKeys);
+          Set<String> possibleKeys = data.getBlockPropertyKeys(e.blockType);
+          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
           if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
             builder.suggest(",");
           } else {
@@ -299,11 +301,6 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       }
     }
     return builder.buildFuture();
-  }
-
-  private SetView<String> getUnusedPropertyKeys(String blockType, Set<String> usedKeys) {
-    Set<String> possibleKeys = data.getBlockPropertyKeys(blockType);
-    return Sets.difference(possibleKeys, usedKeys);
   }
 
   private void suggestValuesStartingWith(SuggestionsBuilder builder, String input,

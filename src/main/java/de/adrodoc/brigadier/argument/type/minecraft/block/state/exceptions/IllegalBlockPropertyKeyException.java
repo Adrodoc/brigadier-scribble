@@ -14,13 +14,13 @@ import de.adrodoc.brigadier.exceptions.ParseException;
 public class IllegalBlockPropertyKeyException extends ParseException {
   private static final long serialVersionUID = 1L;
   public final String blockType;
-  public final String propertyName;
+  public final String propertyKey;
   public final ImmutableSet<String> usedKeys;
 
-  public IllegalBlockPropertyKeyException(String blockType, String propertyName,
+  public IllegalBlockPropertyKeyException(String blockType, String propertyKey,
       Set<String> usedKeys) {
     this.blockType = requireNonNull(blockType, "blockType == null!");
-    this.propertyName = requireNonNull(propertyName, "propertyName == null!");
+    this.propertyKey = requireNonNull(propertyKey, "propertyKey == null!");
     this.usedKeys = ImmutableSet.copyOf(usedKeys);
   }
 }
