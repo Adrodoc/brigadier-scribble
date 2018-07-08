@@ -12,7 +12,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.gson.JsonArray;
@@ -21,8 +20,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
+import de.adrodoc.brigadier.nbt.spec.NbtPathLoader;
+import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
 
 public class DataLoader {
+  private static final String MINECRAFT_NAMESPACE_PREFIX = "minecraft:";
+
   public static DataContext load(String resourceName) throws IOException {
     Map<String, SetMultimap<String, String>> blockProperties = loadBlockProperties(resourceName);
     return new DataContext() {
@@ -44,8 +47,22 @@ public class DataLoader {
       }
 
       @Override
-      public Set<String> getCompoundNbtKeys(String blockType, NbtPath nbtPath) {
-        return ImmutableSet.of(nbtPath.toString());
+      public NbtSpecNode getNbtSpecNode(String blockType, NbtPath nbtPath) {
+        try {
+          if (blockType.startsWith(MINECRAFT_NAMESPACE_PREFIX)) {
+            blockType = blockType.substring(MINECRAFT_NAMESPACE_PREFIX.length());
+          }
+          NbtSpecNode node = NbtPathLoader.loadNbtPaths("block/" + blockType + ".json");
+          for (String pathElement : nbtPath) {
+            node = node.getChild(pathElement);
+            if (node == null) {
+              return null;
+            }
+          }
+          return node;
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
   }

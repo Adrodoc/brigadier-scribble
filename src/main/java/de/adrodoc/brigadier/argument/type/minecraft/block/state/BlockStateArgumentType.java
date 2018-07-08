@@ -1,6 +1,7 @@
 package de.adrodoc.brigadier.argument.type.minecraft.block.state;
 
 import static de.adrodoc.brigadier.exceptions.MoreExceptions.MORE_EXCEPTIONS;
+import static de.adrodoc.brigadier.nbt.spec.ListNbtSpecNode.LIST_CHILD_KEY;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -26,16 +27,19 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import de.adrodoc.brigadier.DataContext;
 import de.adrodoc.brigadier.StringReaderUtils;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedCharException;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedKeyException;
-import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedValueForPropertyOnBlockException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.IllegalBlockPropertyKeyException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.IllegalBlockPropertyValueException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.IllegalNbtKeyException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.MissingNbtValueException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedBlockPropertiesException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedCompoundNbtException;
+import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedListNbtException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnknownBlockTypeException;
 import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
+import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
+import de.adrodoc.brigadier.nbt.spec.NbtType;
 
 public class BlockStateArgumentType implements ArgumentType<Void> {
   private final DataContext data;
@@ -53,20 +57,23 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           e.propertyKey, e.blockType);
     } catch (ExpectedCharException e) {
       throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, e.c);
-    } catch (ExpectedKeyException e) {
-      throw MORE_EXCEPTIONS.expectedKey().createWithContext(reader);
-    } catch (ExpectedValueException e) {
-      throw MORE_EXCEPTIONS.expectedValue().createWithContext(reader);
     } catch (IllegalBlockPropertyKeyException e) {
       throw MORE_EXCEPTIONS.blockDoesNotHaveProperty().createWithContext(reader, e.blockType,
           e.propertyKey);
     } catch (IllegalBlockPropertyValueException e) {
       throw MORE_EXCEPTIONS.blockDoesNotAcceptValueForProperty().create(e.blockType,
           e.propertyValue, e.propertyKey);
+    } catch (IllegalNbtKeyException e) {
+      throw MORE_EXCEPTIONS.blockDoesNotHaveNbt().createWithContext(reader, e.blockType,
+          e.nbtPath.with(e.key));
+    } catch (MissingNbtValueException e) {
+      throw MORE_EXCEPTIONS.expectedValue().createWithContext(reader);
     } catch (UnclosedBlockPropertiesException e) {
       throw MORE_EXCEPTIONS.expectedClosingSquareBracket().createWithContext(reader);
     } catch (UnclosedCompoundNbtException e) {
       throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, '}');
+    } catch (UnclosedListNbtException e) {
+      throw MORE_EXCEPTIONS.readerExpectedSymbol().createWithContext(reader, ']');
     } catch (UnknownBlockTypeException e) {
       throw MORE_EXCEPTIONS.unknownBlockType().createWithContext(reader, e.blockType);
     }
@@ -75,12 +82,13 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
   private void parseInternal(StringReader reader) throws CommandSyntaxException, //
       ExpectedCharException, //
-      ExpectedKeyException, //
-      ExpectedValueException, //
       IllegalBlockPropertyKeyException, //
       IllegalBlockPropertyValueException, //
+      IllegalNbtKeyException, //
+      MissingNbtValueException, //
       UnclosedBlockPropertiesException, //
       UnclosedCompoundNbtException, //
+      UnclosedListNbtException, //
       UnknownBlockTypeException //
   {
     String blockType = StringReaderUtils.readId(reader);
@@ -135,9 +143,10 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
   private JsonObject readNbt(StringReader reader, String blockType) throws CommandSyntaxException, //
       ExpectedCharException, //
-      ExpectedKeyException, //
-      ExpectedValueException, //
-      UnclosedCompoundNbtException //
+      IllegalNbtKeyException, //
+      MissingNbtValueException, //
+      UnclosedCompoundNbtException, //
+      UnclosedListNbtException //
   {
     if (!reader.canRead() || reader.peek() != '{') {
       return new JsonObject();
@@ -149,12 +158,13 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   private JsonElement readJson(StringReader reader, String blockType, NbtPath nbtPath)
       throws CommandSyntaxException, //
       ExpectedCharException, //
-      ExpectedKeyException, //
-      ExpectedValueException, //
-      UnclosedCompoundNbtException //
+      IllegalNbtKeyException, //
+      MissingNbtValueException, //
+      UnclosedCompoundNbtException, //
+      UnclosedListNbtException //
   {
     if (!reader.canRead()) {
-      throw new ExpectedValueException();
+      throw new MissingNbtValueException(blockType, nbtPath);
     }
     char peek = reader.peek();
     switch (peek) {
@@ -165,7 +175,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       default:
         String string = reader.readString();
         if (string.isEmpty()) {
-          throw new ExpectedValueException();
+          throw new MissingNbtValueException(blockType, nbtPath);
         }
         return new JsonPrimitive(string);
     }
@@ -174,12 +184,13 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   private JsonObject readObject(StringReader reader, String blockType, NbtPath nbtPath)
       throws CommandSyntaxException, //
       ExpectedCharException, //
-      ExpectedKeyException, //
-      ExpectedValueException, //
-      UnclosedCompoundNbtException //
+      IllegalNbtKeyException, //
+      MissingNbtValueException, //
+      UnclosedCompoundNbtException, //
+      UnclosedListNbtException //
   {
     if (!reader.canRead() || reader.peek() != '{') {
-      throw new ExpectedValueException();
+      throw new IllegalStateException("Failed to read object");
     }
     reader.skip();
     reader.skipWhitespace();
@@ -187,8 +198,9 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
     JsonObject result = new JsonObject();
     while (reader.canRead() && reader.peek() != '}') {
       String key = reader.readString();
-      if (key.isEmpty()) {
-        throw new ExpectedKeyException();
+      Set<String> possibleKeys = data.getNbtChildNames(blockType, nbtPath);
+      if (!possibleKeys.contains(key)) {
+        throw new IllegalNbtKeyException(blockType, nbtPath, key, result.keySet());
       }
       readSeperator(reader, ':');
       JsonElement value = readJson(reader, blockType, nbtPath.with(key));
@@ -207,26 +219,27 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   private JsonElement readArray(StringReader reader, String blockType, NbtPath nbtPath)
       throws CommandSyntaxException, //
       ExpectedCharException, //
-      ExpectedKeyException, //
-      ExpectedValueException, //
-      UnclosedCompoundNbtException //
+      IllegalNbtKeyException, //
+      MissingNbtValueException, //
+      UnclosedCompoundNbtException, //
+      UnclosedListNbtException //
   {
     if (!reader.canRead() || reader.peek() != '[') {
-      throw new ExpectedValueException();
+      throw new IllegalStateException("Failed to read array");
     }
     reader.skip();
     reader.skipWhitespace();
 
     JsonArray result = new JsonArray();
     while (reader.canRead() && reader.peek() != ']') {
-      JsonElement element = readJson(reader, blockType, nbtPath.with("[]"));
+      JsonElement element = readJson(reader, blockType, nbtPath.with(LIST_CHILD_KEY));
       result.add(element);
       if (!tryReadSeperator(reader, ',')) {
         break;
       }
     }
     if (!reader.canRead() || reader.peek() != ']') {
-      throw new ExpectedCharException(']');
+      throw new UnclosedListNbtException(blockType, nbtPath, result.size());
     }
     reader.skip();
     return result;
@@ -266,10 +279,6 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           throw pe;
         } catch (ExpectedCharException e) {
           builder.suggest(String.valueOf(e.c));
-        } catch (ExpectedKeyException e) {
-          builder.suggest("key");
-        } catch (ExpectedValueException e) {
-          builder.suggest("value");
         } catch (IllegalBlockPropertyKeyException e) {
           Set<String> possibleKeys = data.getBlockPropertyKeys(e.blockType);
           SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
@@ -277,6 +286,24 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
         } catch (IllegalBlockPropertyValueException e) {
           Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyKey);
           suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
+        } catch (IllegalNbtKeyException e) {
+          Set<String> possibleKeys = data.getNbtChildNames(e.blockType, e.nbtPath);
+          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
+          suggestValuesStartingWith(builder, e.key, unusedKeys);
+        } catch (MissingNbtValueException e) {
+          NbtSpecNode node = data.getNbtSpecNode(e.blockType, e.nbtPath);
+          if (node != null) {
+            NbtType type = node.getType();
+            switch (type) {
+              case COMPOUND:
+                builder.suggest("{");
+              case LIST:
+                builder.suggest("[");
+                break;
+              default:
+                break;
+            }
+          }
         } catch (UnclosedBlockPropertiesException e) {
           builder.suggest("]");
           Set<String> possibleKeys = data.getBlockPropertyKeys(e.blockType);
@@ -287,13 +314,25 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
             suggestValues(builder, unusedKeys);
           }
         } catch (UnclosedCompoundNbtException e) {
-          builder.suggest("}");
-          Set<String> possibleKeys = data.getCompoundNbtKeys(e.blockType, e.nbtPath);
-          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
-          if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
-            builder.suggest(",");
-          } else {
-            suggestValues(builder, unusedKeys);
+          Set<String> possibleKeys = data.getNbtChildNames(e.blockType, e.nbtPath);
+          if (!possibleKeys.isEmpty()) {
+            builder.suggest("}");
+            SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
+            if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
+              builder.suggest(",");
+            } else {
+              suggestValues(builder, unusedKeys);
+            }
+          }
+        } catch (UnclosedListNbtException e) {
+          NbtSpecNode node = data.getNbtSpecNode(e.blockType, e.nbtPath);
+          if (node != null) {
+            builder.suggest("]");
+            if (e.size > 0 && !remaining.trim().endsWith(",")) {
+              builder.suggest(",");
+            } else {
+
+            }
           }
         } catch (UnknownBlockTypeException e) {
           suggestValuesStartingWith(builder, e.blockType, data.getBlockTypes());
@@ -306,8 +345,8 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
   private void suggestValuesStartingWith(SuggestionsBuilder builder, String input,
       Iterable<String> possibleSuggestions) {
     String prefix = input.toLowerCase();
-    Iterable<String> suggestions =
-        Iterables.filter(possibleSuggestions, possibleValue -> possibleValue.startsWith(prefix));
+    Iterable<String> suggestions = Iterables.filter(possibleSuggestions,
+        possibleValue -> possibleValue.toLowerCase().startsWith(prefix));
     suggestValues(builder, suggestions);
   }
 

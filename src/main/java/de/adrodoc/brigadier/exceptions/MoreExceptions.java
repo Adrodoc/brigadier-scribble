@@ -11,6 +11,9 @@ public class MoreExceptions extends BuiltInExceptions {
   private static final Dynamic3CommandExceptionType BLOCK_DOES_NOT_ACCEPT_VALUE_FOR_PROPERTY =
       new Dynamic3CommandExceptionType((block, value, property) -> new LiteralMessage(
           "Block " + block + " does not accept '" + value + "' for " + property + " property"));
+  private static final Dynamic2CommandExceptionType BLOCK_DOES_NOT_HAVE_NBT =
+      new Dynamic2CommandExceptionType((block, nbtPath) -> new LiteralMessage(
+          "Block " + block + " does not have nbt '" + nbtPath + "'"));
   private static final Dynamic2CommandExceptionType BLOCK_DOES_NOT_HAVE_PROPERTY =
       new Dynamic2CommandExceptionType((block, property) -> new LiteralMessage(
           "Block " + block + " does not have property '" + property + "'"));
@@ -19,6 +22,7 @@ public class MoreExceptions extends BuiltInExceptions {
   private static final SimpleCommandExceptionType EXPECTED_CLOSING_SQUARE_BRACKET =
       new SimpleCommandExceptionType(
           new LiteralMessage("Expected closing ] for block state properties"));
+  @Deprecated
   private static final SimpleCommandExceptionType EXPECTED_KEY =
       new SimpleCommandExceptionType(new LiteralMessage("Expected key"));
   private static final SimpleCommandExceptionType EXPECTED_VALUE =
@@ -40,6 +44,10 @@ public class MoreExceptions extends BuiltInExceptions {
     return BLOCK_DOES_NOT_ACCEPT_VALUE_FOR_PROPERTY;
   }
 
+  public Dynamic2CommandExceptionType blockDoesNotHaveNbt() {
+    return BLOCK_DOES_NOT_HAVE_NBT;
+  }
+
   public Dynamic2CommandExceptionType blockDoesNotHaveProperty() {
     return BLOCK_DOES_NOT_HAVE_PROPERTY;
   }
@@ -52,6 +60,7 @@ public class MoreExceptions extends BuiltInExceptions {
     return EXPECTED_CLOSING_SQUARE_BRACKET;
   }
 
+  @Deprecated
   public SimpleCommandExceptionType expectedKey() {
     return EXPECTED_KEY;
   }
