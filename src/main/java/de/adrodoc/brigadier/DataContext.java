@@ -13,7 +13,7 @@ public interface DataContext {
 
   Set<String> getBlockTypes();
 
-  default ImmutableSet<String> getNbtChildNames(String blockType, NbtPath nbtPath) {
+  default ImmutableSet<String> getNbtKeys(String blockType, NbtPath nbtPath) {
     NbtSpecNode node = getNbtSpecNode(blockType, nbtPath);
     if (node != null) {
       return node.getChildNames();

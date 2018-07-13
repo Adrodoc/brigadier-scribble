@@ -195,8 +195,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
     JsonObject result = new JsonObject();
     while (reader.canRead() && reader.peek() != '}') {
       String key = reader.readString();
-      Set<String> possibleKeys = data.getNbtChildNames(blockType, nbtPath);
-      if (!possibleKeys.contains(key)) {
+      if (data.getNbtSpecNode(blockType, nbtPath.resolve(key)) == null) {
         throw new IllegalNbtKeyException(blockType, nbtPath, key, result.keySet());
       }
       readSeperator(reader, ':');
@@ -284,7 +283,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           Set<String> possibleValues = data.getBlockPropertyValues(e.blockType, e.propertyKey);
           suggestValuesStartingWith(builder, e.propertyValue, possibleValues);
         } catch (IllegalNbtKeyException e) {
-          Set<String> possibleKeys = data.getNbtChildNames(e.blockType, e.nbtPath);
+          Set<String> possibleKeys = data.getNbtKeys(e.blockType, e.nbtPath);
           SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
           suggestValuesStartingWith(builder, e.key, unusedKeys);
         } catch (MissingNbtValueException e) {
@@ -302,15 +301,13 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
             suggestValues(builder, unusedKeys);
           }
         } catch (UnclosedCompoundNbtException e) {
-          Set<String> possibleKeys = data.getNbtChildNames(e.blockType, e.nbtPath);
-          if (!possibleKeys.isEmpty()) {
-            builder.suggest("}");
-            SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
-            if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
-              builder.suggest(",");
-            } else {
-              suggestValues(builder, unusedKeys);
-            }
+          Set<String> possibleKeys = data.getNbtKeys(e.blockType, e.nbtPath);
+          builder.suggest("}");
+          SetView<String> unusedKeys = Sets.difference(possibleKeys, e.usedKeys);
+          if (!e.usedKeys.isEmpty() && !unusedKeys.isEmpty() && !remaining.trim().endsWith(",")) {
+            builder.suggest(",");
+          } else {
+            suggestValues(builder, unusedKeys);
           }
         } catch (UnclosedListNbtException e) {
           NbtSpecNode node = data.getNbtSpecNode(e.blockType, e.nbtPath);
