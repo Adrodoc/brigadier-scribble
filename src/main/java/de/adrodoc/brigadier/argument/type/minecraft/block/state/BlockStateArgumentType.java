@@ -1,15 +1,12 @@
 package de.adrodoc.brigadier.argument.type.minecraft.block.state;
 
 import static de.adrodoc.brigadier.exceptions.MoreExceptions.MORE_EXCEPTIONS;
-import static de.adrodoc.brigadier.nbt.spec.ListNbtSpecNode.LIST_CHILD_KEY;
 import static java.util.Objects.requireNonNull;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
@@ -23,7 +20,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-
 import de.adrodoc.brigadier.DataContext;
 import de.adrodoc.brigadier.StringReaderUtils;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.ExpectedCharException;
@@ -36,8 +32,8 @@ import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.Unclo
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedCompoundNbtException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedListNbtException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnknownBlockTypeException;
-import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
+import de.adrodoc.brigadier.nbt.path.NbtPath;
 import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
 import de.adrodoc.brigadier.nbt.spec.NbtType;
 
@@ -65,7 +61,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
           e.propertyValue, e.propertyKey);
     } catch (IllegalNbtKeyException e) {
       throw MORE_EXCEPTIONS.blockDoesNotHaveNbt().createWithContext(reader, e.blockType,
-          e.nbtPath.with(e.key));
+          e.nbtPath.resolve(e.key));
     } catch (MissingNbtValueException e) {
       throw MORE_EXCEPTIONS.expectedValue().createWithContext(reader);
     } catch (UnclosedBlockPropertiesException e) {
@@ -203,7 +199,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
         throw new IllegalNbtKeyException(blockType, nbtPath, key, result.keySet());
       }
       readSeperator(reader, ':');
-      JsonElement value = readJson(reader, blockType, nbtPath.with(key));
+      JsonElement value = readJson(reader, blockType, nbtPath.resolve(key));
       result.add(key, value);
       if (!tryReadSeperator(reader, ',')) {
         break;
@@ -232,7 +228,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
 
     JsonArray result = new JsonArray();
     while (reader.canRead() && reader.peek() != ']') {
-      JsonElement element = readJson(reader, blockType, nbtPath.with(LIST_CHILD_KEY));
+      JsonElement element = readJson(reader, blockType, nbtPath.resolveListElement());
       result.add(element);
       if (!tryReadSeperator(reader, ',')) {
         break;

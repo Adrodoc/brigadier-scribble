@@ -1,15 +1,17 @@
 package de.adrodoc.brigadier.nbt.spec;
 
 import static java.util.Objects.requireNonNull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
+import com.google.common.collect.ImmutableSet;
+import de.adrodoc.brigadier.nbt.path.NbtPathElement;
 
-import com.google.common.collect.ImmutableMap;
-
+@Immutable
 public class ListNbtSpecNode implements NbtSpecNode {
-  public static final String LIST_CHILD_KEY = "[]";
-  private final NbtSpecNode child;
+  private final NbtSpecNode element;
 
-  public ListNbtSpecNode(NbtSpecNode child) {
-    this.child = requireNonNull(child, "child == null!");
+  public ListNbtSpecNode(NbtSpecNode element) {
+    this.element = requireNonNull(element, "element == null!");
   }
 
   @Override
@@ -18,12 +20,16 @@ public class ListNbtSpecNode implements NbtSpecNode {
   }
 
   @Override
-  public NbtSpecNode getChild(String name) {
-    return LIST_CHILD_KEY.equals(name) ? child : null;
+  public @Nullable NbtSpecNode get(NbtPathElement pathElement) {
+    return pathElement.of(this);
+  }
+
+  public NbtSpecNode getElement() {
+    return element;
   }
 
   @Override
-  public ImmutableMap<String, NbtSpecNode> getChildren() {
-    return ImmutableMap.of();
+  public ImmutableSet<String> getChildNames() {
+    return ImmutableSet.of();
   }
 }

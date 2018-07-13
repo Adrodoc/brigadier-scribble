@@ -1,13 +1,26 @@
 package de.adrodoc.brigadier.nbt.spec;
 
-import com.google.common.collect.ImmutableMap;
+import javax.annotation.Nullable;
+import com.google.common.collect.ImmutableSet;
+import de.adrodoc.brigadier.nbt.path.NbtPath;
+import de.adrodoc.brigadier.nbt.path.NbtPathElement;
 
 public interface NbtSpecNode {
-  ImmutableMap<String, NbtSpecNode> getChildren();
+  NbtType getType();
 
-  default NbtSpecNode getChild(String name) {
-    return getChildren().get(name);
+  @Nullable
+  NbtSpecNode get(NbtPathElement pathElement);
+
+  default @Nullable NbtSpecNode get(NbtPath nbtPath) {
+    NbtSpecNode node = this;
+    for (NbtPathElement pathElement : nbtPath) {
+      node = node.get(pathElement);
+      if (node == null) {
+        return null;
+      }
+    }
+    return node;
   }
 
-  NbtType getType();
+  ImmutableSet<String> getChildNames();
 }

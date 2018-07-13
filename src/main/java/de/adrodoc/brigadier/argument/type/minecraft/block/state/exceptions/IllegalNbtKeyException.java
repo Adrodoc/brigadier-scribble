@@ -7,9 +7,8 @@ import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
 import com.google.common.collect.ImmutableSet;
-
-import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
+import de.adrodoc.brigadier.nbt.path.NbtPath;
 
 @Immutable
 public class IllegalNbtKeyException extends ParseException {

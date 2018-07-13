@@ -3,9 +3,8 @@ package de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.concurrent.Immutable;
-
-import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
 import de.adrodoc.brigadier.exceptions.ParseException;
+import de.adrodoc.brigadier.nbt.path.NbtPath;
 
 @Immutable
 public class UnclosedListNbtException extends ParseException {

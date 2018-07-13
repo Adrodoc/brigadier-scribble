@@ -3,14 +3,14 @@ package de.adrodoc.brigadier;
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
+import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
@@ -18,9 +18,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import de.adrodoc.brigadier.argument.type.minecraft.nbt.NbtPath;
-import de.adrodoc.brigadier.nbt.spec.NbtPathLoader;
+import de.adrodoc.brigadier.nbt.path.NbtPath;
+import de.adrodoc.brigadier.nbt.spec.CompoundNbtSpecNode;
+import de.adrodoc.brigadier.nbt.spec.NbtSpecLoader;
 import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
 
 public class DataLoader {
@@ -29,6 +29,8 @@ public class DataLoader {
   public static DataContext load(String resourceName) throws IOException {
     Map<String, SetMultimap<String, String>> blockProperties = loadBlockProperties(resourceName);
     return new DataContext() {
+      private final Map<String, CompoundNbtSpecNode> nbtSpecCache = new HashMap<>();
+
       @Override
       public Set<String> getBlockPropertyKeys(String blockType) {
         SetMultimap<String, String> properties = blockProperties.get(blockType);
@@ -47,19 +49,21 @@ public class DataLoader {
       }
 
       @Override
-      public NbtSpecNode getNbtSpecNode(String blockType, NbtPath nbtPath) {
+      public @Nullable NbtSpecNode getNbtSpecNode(String blockType, NbtPath nbtPath) {
+        CompoundNbtSpecNode spec = getNbtSpec(blockType);
+        return spec.get(nbtPath);
+      }
+
+      private CompoundNbtSpecNode getNbtSpec(String blockType) {
+        return nbtSpecCache.computeIfAbsent(blockType, this::loadNbtSpec);
+      }
+
+      private CompoundNbtSpecNode loadNbtSpec(String blockType) {
+        if (blockType.startsWith(MINECRAFT_NAMESPACE_PREFIX)) {
+          blockType = blockType.substring(MINECRAFT_NAMESPACE_PREFIX.length());
+        }
         try {
-          if (blockType.startsWith(MINECRAFT_NAMESPACE_PREFIX)) {
-            blockType = blockType.substring(MINECRAFT_NAMESPACE_PREFIX.length());
-          }
-          NbtSpecNode node = NbtPathLoader.loadNbtPaths("block/" + blockType + ".json");
-          for (String pathElement : nbtPath) {
-            node = node.getChild(pathElement);
-            if (node == null) {
-              return null;
-            }
-          }
-          return node;
+          return NbtSpecLoader.loadNbtSpec("block/" + blockType + ".json");
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
