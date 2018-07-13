@@ -33,6 +33,7 @@ import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.Unclo
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnclosedListNbtException;
 import de.adrodoc.brigadier.argument.type.minecraft.block.state.exceptions.UnknownBlockTypeException;
 import de.adrodoc.brigadier.exceptions.ParseException;
+import de.adrodoc.brigadier.nbt.path.ListElementNbtPathElement;
 import de.adrodoc.brigadier.nbt.path.NbtPath;
 import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
 import de.adrodoc.brigadier.nbt.spec.NbtType;
@@ -289,16 +290,7 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
         } catch (MissingNbtValueException e) {
           NbtSpecNode node = data.getNbtSpecNode(e.blockType, e.nbtPath);
           if (node != null) {
-            NbtType type = node.getType();
-            switch (type) {
-              case COMPOUND:
-                builder.suggest("{");
-              case LIST:
-                builder.suggest("[");
-                break;
-              default:
-                break;
-            }
+            suggest(builder, node.getType());
           }
         } catch (UnclosedBlockPropertiesException e) {
           builder.suggest("]");
@@ -327,7 +319,10 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
             if (e.size > 0 && !remaining.trim().endsWith(",")) {
               builder.suggest(",");
             } else {
-
+              NbtSpecNode element = node.get(ListElementNbtPathElement.INSTANCE);
+              if (element != null) {
+                suggest(builder, element.getType());
+              }
             }
           }
         } catch (UnknownBlockTypeException e) {
@@ -336,6 +331,19 @@ public class BlockStateArgumentType implements ArgumentType<Void> {
       }
     }
     return builder.buildFuture();
+  }
+
+  private void suggest(SuggestionsBuilder builder, NbtType type) {
+    switch (type) {
+      case COMPOUND:
+        builder.suggest("{");
+        break;
+      case LIST:
+        builder.suggest("[");
+        break;
+      default:
+        break;
+    }
   }
 
   private void suggestValuesStartingWith(SuggestionsBuilder builder, String input,

@@ -6,7 +6,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
-import java.util.Collections;
 import java.util.Map.Entry;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonArray;
@@ -23,7 +22,7 @@ public class NbtSpecLoader {
   public static CompoundNbtSpecNode loadNbtSpec(String resourceName) throws IOException {
     URL resource = NbtSpecLoader.class.getClassLoader().getResource(resourceName);
     if (resource == null) {
-      return new CompoundNbtSpecNode(Collections.emptyMap());
+      return CompoundNbtSpecNode.EMPTY;
     }
     try (Reader reader = asCharSource(resource, UTF_8).openStream()) {
       JsonObject jsonObject = new JsonParser().parse(reader).getAsJsonObject();
@@ -37,11 +36,13 @@ public class NbtSpecLoader {
       throws IOException {
     ImmutableMap.Builder<String, NbtSpecNode> childrenBuilder = ImmutableMap.builder();
     JsonObject children = jsonObject.getAsJsonObject("children");
-    for (Entry<String, JsonElement> entry : children.entrySet()) {
-      String key = entry.getKey();
-      JsonObject value = entry.getValue().getAsJsonObject();
-      NbtSpecNode child = toNbtSpec(value, resourceName);
-      childrenBuilder.put(key, child);
+    if (children != null) {
+      for (Entry<String, JsonElement> entry : children.entrySet()) {
+        String key = entry.getKey();
+        JsonObject value = entry.getValue().getAsJsonObject();
+        NbtSpecNode child = toNbtSpec(value, resourceName);
+        childrenBuilder.put(key, child);
+      }
     }
 
     JsonArray child_refs = jsonObject.getAsJsonArray("child_ref");
@@ -80,6 +81,8 @@ public class NbtSpecLoader {
           return new StringNbtSpecNode();
         case "int":
           return new IntNbtSpecNode();
+        case "long":
+          return new LongNbtSpecNode();
         default:
           throw new IllegalArgumentException("Unsupported type: " + type);
       }

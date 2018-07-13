@@ -1,6 +1,7 @@
 package de.adrodoc.brigadier;
 
 import java.util.Set;
+import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableSet;
 import de.adrodoc.brigadier.nbt.path.NbtPath;
 import de.adrodoc.brigadier.nbt.spec.NbtSpecNode;
@@ -21,5 +22,6 @@ public interface DataContext {
     }
   }
 
+  @Nullable
   NbtSpecNode getNbtSpecNode(String blockType, NbtPath nbtPath);
 }

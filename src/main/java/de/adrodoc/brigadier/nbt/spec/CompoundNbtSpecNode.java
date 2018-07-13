@@ -10,6 +10,7 @@ import de.adrodoc.brigadier.nbt.path.NbtPathElement;
 
 @Immutable
 public class CompoundNbtSpecNode implements NbtSpecNode {
+  public static final CompoundNbtSpecNode EMPTY = new CompoundNbtSpecNode(ImmutableMap.of());
   private final ImmutableMap<String, NbtSpecNode> children;
 
   public CompoundNbtSpecNode(Map<String, NbtSpecNode> children) {
